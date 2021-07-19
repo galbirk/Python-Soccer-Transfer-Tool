@@ -24,13 +24,17 @@ def windows_print(filename):
 
 def sort_data(data,sortBy):
     sortBy = sortBy.lower()
-    return sorted(data, key=lambda k: k[sortBy]) 
+    if args.desc:
+        return sorted(data, key=lambda k: k[sortBy],reverse=True) 
+    else:
+        return sorted(data, key=lambda k: k[sortBy]) 
 
 # Argument Parser
 parser = argparse.ArgumentParser()
 parser.add_argument('-d','--destinaton',dest='dest',help="Path to execl file to be saved.",default=r"transfer.xlsx")
 parser.add_argument('-s','--sort',dest='sortBy',help="Sort the excel by: name, nation, preLeague, newLeague, preClub, newClub",default='newClub')
-parser.add_argument('-p','--print',dest='toPrint',help="Add flag if you want to print the excel sheet.")
+parser.add_argument('-r','--desc',dest='desc',help="Descending Sorting",action='store_true')
+parser.add_argument('-p','--print',dest='toPrint',action='store_true',help="Add flag if you want to print the excel sheet.")
 args = parser.parse_args()
 
 # Get Data from API
@@ -40,12 +44,26 @@ transfers_list = res['sheets']['Transfers']
 
 # Prepare Data for Excel
 for transfer in transfers_list:
-    data_for_excel.append({'name':transfer["Player name"],'nation':transfer["Nationality"],'pos':transfer["Primary player position"]
-                            ,'preLeague':transfer["What was the previous league?"],'newLeague':transfer["What is the new league?"]
-                            ,'preClub':transfer["What was the previous club?"],'newClub':transfer["What is the new club?"]})
+    if transfer['Price in €'] != '':
+        transfer['Price in €'] = int(transfer['Price in €'])
+    else:
+        transfer['Price in €'] = 0
+
+    data_for_excel.append(
+                        {
+                            'name':transfer["Player name"]
+                            ,'nation':transfer["Nationality"]
+                            ,'pos':transfer["Primary player position"]
+                            ,'price':transfer['Price in €']
+                            ,'preleague':transfer["What was the previous league?"]
+                            ,'newleague':transfer["What is the new league?"]
+                            ,'preclub':transfer["What was the previous club?"]
+                            ,'newclub':transfer["What is the new club?"]       
+                        }
+                    )
 
 # Sort Data
-data_for_excel = sort_data(data_for_excel,args.sortBy)
+data_for_excel = sort_data(data_for_excel,str(args.sortBy))
 
 # Create Excel Workbook
 workbook = xw.Workbook(args.dest)
@@ -57,10 +75,11 @@ bold = workbook.add_format({'bold': True})
 worksheet.write('A1', 'Player Name',bold)
 worksheet.write('B1', 'Nationality',bold)
 worksheet.write('C1', 'Primary player position',bold)
-worksheet.write('D1', 'Previous League',bold)
-worksheet.write('E1', 'Previous Club',bold)
-worksheet.write('F1', 'New League',bold)
-worksheet.write('G1', 'New Club',bold)
+worksheet.write('D1', 'Price in €',bold)
+worksheet.write('E1', 'Previous League',bold)
+worksheet.write('F1', 'Previous Club',bold)
+worksheet.write('G1', 'New League',bold)
+worksheet.write('H1', 'New Club',bold)
 
 start_row = 1
 start_col = 0
@@ -69,7 +88,7 @@ start_col = 0
 for transfer in tuple(data_for_excel):
     col = start_col
     for attr in transfer:
-        worksheet.write(start_row,col,attr)
+        worksheet.write(start_row,col,transfer[attr])
         col += 1
     start_row += 1
 
